@@ -1,0 +1,45 @@
+name: sync-dir-txt
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate DIR.txt
+        run: |
+          python3 tools/gen.DIR.txt.py
+
+      - name: Commit & Push if changed
+        run: |
+          set -e
+
+          # Stage first so we can detect BOTH new (untracked) and modified files
+          git add DIR.txt
+
+          # If staged content has no diff, skip commit
+          if git diff --cached --quiet; then
+            echo "[INFO] DIR.txt unchanged. Skip commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(docs): sync DIR.txt"
+          git push
